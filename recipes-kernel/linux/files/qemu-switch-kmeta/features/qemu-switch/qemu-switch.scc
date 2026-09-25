@@ -1,0 +1,8 @@
+# SPDX-License-Identifier: MIT
+define KFEATURE_DESCRIPTION "Emulated switch on QEMU x86-64: EFI Boot Guard, virtio, A/B squashfs root"
+define KFEATURE_COMPATIBILITY board
+
+# See meta-rtl83xx-bsp's rtl83xx.scc: "hardware" symbols that do not reach
+# .config are reported even at KCONF_AUDIT_LEVEL 1.
+kconf hardware     qemu-switch-hardware.cfg
+kconf non-hardware qemu-switch-yocto.cfg

@@ -1,0 +1,35 @@
+From: Albrecht Lohofener <albrecht@albrechtloh.de>
+Subject: [PATCH] w83627hf_wdt: build with musl
+
+musl's <sys/io.h> has outb() but not outb_p(), so the driver does not
+compile against a musl sysroot:
+
+  error: implicit declaration of function 'outb_p'
+
+Define it the way glibc does, as outb() followed by a dummy write to
+port 0x80, when not building with glibc.
+
+Upstream-Status: Pending
+Signed-off-by: Albrecht Lohofener <albrecht@albrechtloh.de>
+---
+--- a/drivers/watchdog/w83627hf_wdt.c	2026-09-25 15:26:31.076501013 +0200
++++ b/drivers/watchdog/w83627hf_wdt.c	2026-09-25 15:26:31.086437831 +0200
+@@ -40,6 +40,18 @@
+ #include <efilib.h>
+ #include <pci/header.h>
+ #include <sys/io.h>
++
++#ifndef __GLIBC__
++/*
++ * musl's <sys/io.h> has no pausing variants. glibc's outb_p() is outb()
++ * followed by a dummy write to port 0x80.
++ */
++static inline void outb_p(unsigned char value, unsigned short port)
++{
++	outb(value, port);
++	outb(0, 0x80);
++}
++#endif
+ #include <mmio.h>
+ #include "simatic.h"
+ #include "utils.h"

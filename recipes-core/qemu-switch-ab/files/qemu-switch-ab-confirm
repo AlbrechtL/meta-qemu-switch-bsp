@@ -1,0 +1,32 @@
+#!/bin/sh
+### BEGIN INIT INFO
+# Provides:          qemu-switch-ab-confirm
+# Required-Start:    $all
+# Default-Start:     2 3 4 5
+# Short-Description: Confirm the A/B slot booted after an update
+### END INIT INFO
+#
+# After an update EFI Boot Guard boots the new environment once with ustate
+# TESTING (2). If the system resets before that environment is set back to
+# OK (0) -- watchdog, panic=5, a reboot -- it marks the environment FAILED and
+# boots the previous one. Reaching the end of rc5.d, with clixon-backend
+# started, counts as a working system: confirm the environment so the slot
+# stays.
+
+case "$1" in
+    start) ;;
+    *) exit 0 ;;
+esac
+
+slot=$(sed -n 's/.*root=\([^ ]*\).*/\1/p' /proc/cmdline)
+
+case "$(bg_printenv -c -o ustate -r 2>/dev/null)" in
+    USTATE=2) ;;
+    *) exit 0 ;;
+esac
+
+if bg_setenv -c >/dev/null 2>&1; then
+    echo "A/B: slot on $slot confirmed"
+else
+    echo "A/B: cannot confirm the slot on $slot, EFI Boot Guard will roll back on the next reset"
+fi

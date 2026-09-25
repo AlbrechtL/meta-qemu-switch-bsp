@@ -1,0 +1,44 @@
+# short-description: A/B disk image for the emulated QEMU switch
+# long-description: UEFI disk with EFI Boot Guard: the ESP with the
+# bootloader, two config partitions with one kernel and boot environment
+# each, two identical squashfs root filesystem slots, and an empty ext4 data
+# partition for the overlay upper layer.
+#
+#   p1  efi     vfat       32 MiB  EFI/BOOT/bootx64.efi (EFI Boot Guard)
+#   p2  BOOT0   vfat       32 MiB  bzImage, BGENV.DAT, EFILABEL -- slot A
+#   p3  BOOT1   vfat       32 MiB  bzImage, BGENV.DAT, EFILABEL -- slot B
+#   p4  slot A  squashfs  128 MiB
+#   p5  slot B  squashfs  128 MiB
+#   p6  data    ext4      128 MiB
+#
+# Slot A always boots through BOOT0 and slot B through BOOT1: each config
+# partition's command line names its slot as root=. An update writes the
+# idle slot, the kernel on its config partition and, through SWUpdate, a new
+# environment there with a higher revision. BOOT0 starts out with the higher
+# revision, so the first boot is slot A.
+#
+# The efibootguard plugins size a vfat file system as its content plus
+# BOOTDD_EXTRA_SPACE (16 MiB), which is why even the ESP needs 32 MiB. On the
+# config partitions that headroom is what an update writes the new bzImage
+# into.
+#
+# The partition numbers are fixed: the command lines below, overlay-init and
+# the .swu refer to them.
+#
+# "," separates --sourceparams, so the command line cannot carry one:
+# console=ttyS0 without a baud rate, which QEMU's serial port ignores anyway.
+#
+# The image file comes from IMGDEPLOYDIR, since wic runs before
+# do_image_complete copies it to DEPLOY_DIR_IMAGE. By its link name, not
+# IMAGE_NAME: when do_image_squashfs_xz is not rerun, the file there still
+# carries the timestamp of the run that made it, and IMAGE_NAME the current
+# one.
+
+part --source efibootguard_efi --label efi --ondisk vda --align 1024 --fixed-size 32M --part-type c12a7328-f81f-11d2-ba4b-00a0c93ec93b
+part --source efibootguard_boot --label boot0 --ondisk vda --align 1024 --fixed-size 32M --part-type ebd0a0a2-b9e5-4433-87c0-68b6b72699c7 --sourceparams "watchdog=${EFIBOOTGUARD_WATCHDOG_TIMEOUT},revision=2,args=root=/dev/vda4 rootfstype=squashfs ro init=/sbin/overlay-init console=ttyS0 panic=5"
+part --source efibootguard_boot --label boot1 --ondisk vda --align 1024 --fixed-size 32M --part-type ebd0a0a2-b9e5-4433-87c0-68b6b72699c7 --sourceparams "watchdog=${EFIBOOTGUARD_WATCHDOG_TIMEOUT},revision=1,args=root=/dev/vda5 rootfstype=squashfs ro init=/sbin/overlay-init console=ttyS0 panic=5"
+part --source rawcopy --sourceparams="file=${IMGDEPLOYDIR}/${IMAGE_LINK_NAME}.squashfs-xz" --ondisk vda --align 1024 --fixed-size 128M
+part --source rawcopy --sourceparams="file=${IMGDEPLOYDIR}/${IMAGE_LINK_NAME}.squashfs-xz" --ondisk vda --align 1024 --fixed-size 128M
+part --fstype=ext4 --label data --ondisk vda --align 1024 --fixed-size 128M
+
+bootloader --ptable gpt

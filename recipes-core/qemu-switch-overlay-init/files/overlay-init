@@ -1,0 +1,48 @@
+#!/bin/sh
+# Root filesystem setup for the disk image. The command line in the config
+# partition's boot environment passes this as init=, so the kernel runs it
+# before busybox init, on the read-only squashfs of the active slot (p4 or
+# p5).
+#
+# Stack an overlay on it whose upper layer lives on the ext4 "data" partition
+# (p6), pivot into the overlay and hand over to /sbin/init. Same arrangement
+# as the other BSPs' overlay-init: the squashfs stays visible under /rom and
+# the upper layer under /overlay. Both slots share the upper layer, so the
+# configuration survives an update and a rollback.
+
+PATH=/sbin:/bin:/usr/sbin:/usr/bin
+
+DATA=/dev/vda6
+
+log() {
+    echo "overlay-init: $*"
+}
+
+if mount -t ext4 -o noatime "$DATA" /overlay; then
+    log "$DATA mounted on /overlay"
+else
+    log "cannot mount $DATA, changes will NOT survive a reboot"
+    mount -t tmpfs -o mode=0755 tmpfs /overlay
+fi
+
+mkdir -p /overlay/upper /overlay/work
+
+# lowerdir=/ sees only the squashfs itself, not the mounts on top of it.
+if mount -t overlay -o noatime,lowerdir=/,upperdir=/overlay/upper,workdir=/overlay/work \
+        overlay /mnt && pivot_root /mnt /mnt/rom; then
+    mount --move /rom/overlay /overlay
+    # devtmpfs_mount() put a devtmpfs on the squashfs' /dev.
+    mount --move /rom/dev /dev 2>/dev/null
+else
+    log "cannot set up the overlay, continuing on the read-only squashfs"
+fi
+
+# Neither of these belongs on the disk: SWUpdate unpacks into /tmp, and
+# /var/log is a symlink into /var/volatile. The image drops /var/volatile from
+# fstab (qemu-switch-image.bb), since "mount -a" would otherwise stack a
+# second, empty tmpfs over the directories created here.
+mount -t tmpfs -o mode=1777,nosuid,nodev tmpfs /tmp
+mount -t tmpfs -o mode=0755,nosuid,nodev tmpfs /var/volatile
+mkdir -p /var/volatile/log /var/volatile/tmp
+
+exec /sbin/init

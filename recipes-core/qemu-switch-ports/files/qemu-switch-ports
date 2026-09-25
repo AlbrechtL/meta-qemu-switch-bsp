@@ -1,0 +1,30 @@
+#!/bin/sh
+### BEGIN INIT INFO
+# Provides:          qemu-switch-ports
+# Default-Start:     2 3 4 5
+# Short-Description: Name the front ports lan1..lan8
+### END INIT INFO
+#
+# On the real switches the front ports are DSA user ports named after the
+# label on the case (lan1, lan2, ...). Here they are virtio-net devices, which
+# the kernel calls eth0, eth1, ... in PCI order. scripts/qemu-switch
+# (ethernet-switch-os) puts front port N into PCI slot 0x10+N-1, so sorting by
+# PCI address gives the ports in order.
+
+case "$1" in
+    start) ;;
+    *) exit 0 ;;
+esac
+
+n=0
+for dev in $(ls -d /sys/bus/pci/drivers/virtio-pci/0000:* 2>/dev/null | sort); do
+    for net in "$dev"/virtio*/net/*; do
+        [ -e "$net" ] || continue
+        name=${net##*/}
+        n=$((n + 1))
+        case "$name" in
+            lan*) continue ;;
+        esac
+        ip link set dev "$name" name "lan$n" || echo "qemu-switch-ports: cannot rename $name to lan$n"
+    done
+done
