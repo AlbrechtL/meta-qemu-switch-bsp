@@ -7,7 +7,7 @@
 #
 # On the real switches the front ports are DSA user ports named after the
 # label on the case (lan1, lan2, ...). Here they are virtio-net devices, which
-# the kernel calls eth0, eth1, ... in PCI order. scripts/qemu-switch
+# the kernel calls eth0, eth1, ... in PCI order. scripts/x86-64-q35-qemu
 # (ethernet-switch-os) puts front port N into PCI slot 0x10+N-1, so sorting by
 # PCI address gives the ports in order.
 

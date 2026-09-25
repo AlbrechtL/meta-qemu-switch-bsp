@@ -14,7 +14,7 @@ Part of **Ethernet Switch OS**. The build lives in
 [ethernet-switch-os](https://github.com/AlbrechtL/ethernet-switch-os), which
 checks this layer out with [kas](https://kas.readthedocs.io/) and builds the
 images (`kas/board/qemux86-64-switch.yml`), and runs them
-(`scripts/qemu-switch`). The userspace comes from
+(`scripts/x86-64-q35-qemu`). The userspace comes from
 [meta-ethernet-switch-os](https://github.com/AlbrechtL/meta-ethernet-switch-os).
 
 The layer is hardware only: it boots to a shell without
@@ -66,7 +66,7 @@ Guard loads it from.
    busybox `watchdog`, which feeds `/dev/watchdog` from then on.
 6. `qemu-switch-ports` (S03) renames the virtio-net devices to `lan1`..`lan8`
    in PCI order, the names the front ports have on the real switches.
-   `scripts/qemu-switch` puts front port N into PCI slot `0x10+N-1`.
+   `scripts/x86-64-q35-qemu` puts front port N into PCI slot `0x10+N-1`.
 7. `qemu-switch-ab-confirm` (S99) confirms a freshly updated slot, see below.
 
 BOOT0 starts with revision 2 and BOOT1 with revision 1, so a new disk boots
@@ -137,7 +137,7 @@ bitbake qemu-switch-image ovmf qemu-helper-native
 ```
 
 and boot `qemu-switch-image-qemux86-64-switch.rootfs.wic` with OVMF and an
-i6300esb, as `scripts/qemu-switch` in ethernet-switch-os does. EFI Boot Guard
+i6300esb, as `scripts/x86-64-q35-qemu` in ethernet-switch-os does. EFI Boot Guard
 refuses to boot without a watchdog it can arm.
 
 ## License

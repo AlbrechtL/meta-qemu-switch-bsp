@@ -24,7 +24,7 @@ inherit core-image
 COMPATIBLE_MACHINE = "^qemu-switch$"
 
 # The squashfs is the content of both slots, and what an update writes. The
-# .wic is the whole disk: scripts/qemu-switch boots a copy of it. The kernel
+# .wic is the whole disk: scripts/x86-64-q35-qemu boots a copy of it. The kernel
 # is not in the root filesystem but on the config partitions, where EFI Boot
 # Guard loads it from; wic takes it from DEPLOY_DIR_IMAGE.
 # No read-only-rootfs feature: overlay-init makes / writable before busybox
