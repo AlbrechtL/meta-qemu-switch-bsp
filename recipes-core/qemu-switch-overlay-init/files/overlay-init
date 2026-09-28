@@ -20,6 +20,15 @@ log() {
 
 if mount -t ext4 -o noatime "$DATA" /overlay; then
     log "$DATA mounted on /overlay"
+    # Factory reset: ethernet-switch-os-factory-reset left this marker and
+    # rebooted, because the upper layer cannot be deleted while the overlay
+    # on it is in use. The files are deleted, not overwritten: on an SD card
+    # or a disk image the old blocks may still be readable.
+    if [ -e /overlay/.factory-reset ]; then
+        log "factory reset: deleting everything on $DATA"
+        rm -rf /overlay/upper /overlay/work /overlay/.factory-reset
+        sync
+    fi
 else
     log "cannot mount $DATA, changes will NOT survive a reboot"
     mount -t tmpfs -o mode=0755 tmpfs /overlay
